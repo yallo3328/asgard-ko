@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         신의 영역(아스가르드) 위키 한국어 번역
 // @namespace    asgard-ko
-// @version      2.1
+// @version      2.2
 // @updateURL    https://raw.githubusercontent.com/yallo3328/asgard-ko/main/asgard_wiki_ko.user.js
 // @downloadURL  https://raw.githubusercontent.com/yallo3328/asgard-ko/main/asgard_wiki_ko.user.js
 // @description  lizhengqun7-wq.github.io/asgard-website 서버 위키를 한국어로 바꿔 보여 줍니다 (번역 사전은 GitHub yallo3328/asgard-ko)
@@ -79,6 +79,59 @@
     trAttrs(root);
   }
 
+
+  // 큰 목록 페이지(레벨별·맵별 몬스터, 드롭 검색): 탭으로 고른 구간만 조금씩 표시
+  function sectionMode() {
+    const STEP = slug === 'c/m-map' ? 30 : 80;
+    const st = document.createElement('style');
+    st.textContent = '.ako-off{display:none!important}.ako-more{display:block;margin:12px auto 24px;padding:8px 18px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);font:inherit;cursor:pointer}.tabs a.ako-on{outline:2px solid var(--gold);font-weight:700}';
+    document.head.appendChild(st);
+    const secs = [...document.querySelectorAll('main h2.sec[id]')].map(h => {
+      const box = h.nextElementSibling;
+      const items = box ? [...box.querySelectorAll('[data-f]')] : [];
+      const btn = document.createElement('button');
+      btn.className = 'ako-more';
+      box && box.after(btn);
+      const sec = { id: h.id, h, box, items, btn, shown: STEP };
+      btn.addEventListener('click', () => { sec.shown += STEP; apply(); });
+      return sec;
+    });
+    if (!secs.length) return;
+    let active = (secs.find(x => '#' + x.id === location.hash) || secs[0]).id;
+    const flt = document.querySelector('.flt');
+    const tabs = [...document.querySelectorAll('.tabs a[href^="#"]')];
+    function apply() {
+      const q = flt && flt.value.trim();
+      for (const x of secs) {
+        if (q) { // 필터 중에는 전체 구간에서 검색 (원래 필터가 일치하지 않는 항목을 숨김)
+          [x.h, x.box].forEach(e => e && e.classList.remove('ako-off'));
+          x.items.forEach(e => e.classList.remove('ako-off'));
+          x.btn.classList.add('ako-off');
+          continue;
+        }
+        const on = x.id === active;
+        [x.h, x.box, x.btn].forEach(e => e && e.classList.toggle('ako-off', !on));
+        if (on) {
+          x.items.forEach((e, i) => e.classList.toggle('ako-off', i >= x.shown));
+          const left = x.items.length - x.shown;
+          x.btn.textContent = '더 보기 (남은 ' + left + '개)';
+          x.btn.classList.toggle('ako-off', left <= 0);
+        }
+      }
+      tabs.forEach(a => a.classList.toggle('ako-on', !q && a.getAttribute('href') === '#' + active));
+    }
+    tabs.forEach(a => a.addEventListener('click', e => {
+      e.preventDefault();
+      active = a.getAttribute('href').slice(1);
+      history.replaceState(null, '', '#' + active);
+      if (flt && flt.value) { flt.value = ''; flt.dispatchEvent(new Event('input')); }
+      apply();
+      const x = secs.find(s => s.id === active); if (x) x.h.scrollIntoView({ block: 'start' });
+    }));
+    if (flt) flt.addEventListener('input', apply);
+    apply();
+  }
+
   const ready = new Promise(r => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r, { once: true }) : r());
   Promise.all([get('common'), get(slug), slug === 'index' ? get('titles') : Promise.resolve({}), ready]).then(([c, p, tt]) => {
     D = Object.assign({}, c, p); TT = tt;
@@ -86,6 +139,7 @@
     document.title = D[t] || t.split('｜').map(x => D[x.trim()] || x).join('｜');
     document.documentElement.lang = 'ko';
     walk(document.body);
+    if (/^c\/m-(level|map|drop)$/.test(slug)) sectionMode();
     reveal();
     new MutationObserver(ms => {
       for (const m of ms) {
