@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         신의 영역(아스가르드) 위키 한국어 번역
 // @namespace    asgard-ko
-// @version      2.0
+// @version      2.1
+// @updateURL    https://raw.githubusercontent.com/yallo3328/asgard-ko/main/asgard_wiki_ko.user.js
+// @downloadURL  https://raw.githubusercontent.com/yallo3328/asgard-ko/main/asgard_wiki_ko.user.js
 // @description  lizhengqun7-wq.github.io/asgard-website 서버 위키를 한국어로 바꿔 보여 줍니다 (번역 사전은 GitHub yallo3328/asgard-ko)
 // @match        https://lizhengqun7-wq.github.io/asgard-website/*
 // @run-at       document-start
@@ -16,6 +18,10 @@
   const hide = document.createElement('style');
   hide.textContent = 'main,footer,nav.cats,header{visibility:hidden}';
   (function add() { const r = document.head || document.documentElement; if (r) r.appendChild(hide); else setTimeout(add, 0); })();
+  // 스크롤 렉 줄이기: 고정 배경 해제, 화면 밖 카드·표는 그리지 않음
+  const perf = document.createElement('style');
+  perf.textContent = 'body{background-attachment:scroll!important}.mc,.tw,.card,.mcs>*,article>section,article>div{content-visibility:auto;contain-intrinsic-size:auto 160px}';
+  (function add2() { const r = document.head || document.documentElement; if (r) r.appendChild(perf); else setTimeout(add2, 0); })();
   const reveal = () => hide.remove();
   setTimeout(reveal, 3000);
 
